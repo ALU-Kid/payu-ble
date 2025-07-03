@@ -1,5 +1,5 @@
 {
-  "name": "payu-ble",
+  "name": "@rwesa/payu-ble",
   "version": "1.0.0",
   "description": "A flexible, smart Bluetooth Low Energy challenge system for secure device connections",
   "main": "dist/index.js",

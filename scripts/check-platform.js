@@ -96,7 +96,7 @@ function checkPlatformCapabilities() {
     console.log('   - Limited network detection (may require admin privileges)');
     console.log('   - Install deps: npm install ping node-fetch');
   } else {
-    console.log(`🐧 ${platform} detected:');
+    console.log(`🐧 ${platform} detected:`);
     console.log('   - Install network tools for full functionality');
     console.log('   - Install deps: npm install arp-a ping node-fetch');
   }

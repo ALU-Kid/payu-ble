@@ -107,7 +107,7 @@
             background: #f8f9fa;
             border: 2px solid #e9ecef;
             border-radius: 8px;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
             margin: 15px 0;
             padding: 10px;
@@ -126,6 +126,11 @@
             background: rgba(102, 126, 234, 0.1);
         }
 
+        .device-item.selected {
+            background: rgba(102, 126, 234, 0.2);
+            border: 2px solid #667eea;
+        }
+
         .device-item:last-child {
             border-bottom: none;
             margin-bottom: 0;
@@ -141,6 +146,23 @@
             font-size: 0.9em;
             color: #666;
             margin-top: 4px;
+        }
+
+        .device-rssi {
+            font-size: 0.8em;
+            color: #28a745;
+            margin-top: 2px;
+        }
+
+        .scanning-indicator {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .scanning-indicator.active {
+            display: block;
         }
 
         .challenge-section {
@@ -243,6 +265,33 @@
             justify-content: center;
         }
 
+        .demo-controls {
+            background: #e2e3e5;
+            border: 1px solid #d6d8db;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .demo-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .scan-progress {
+            display: none;
+            margin: 15px 0;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .scan-progress.active {
+            display: block;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 20px;
@@ -269,33 +318,54 @@
         <div class="info-box">
             📱 <strong>How to use:</strong> 
             <ol style="margin-top: 10px; margin-left: 20px;">
-                <li>Click "Scan for PayuBLE Devices" to discover nearby devices</li>
-                <li>Select a device from the list to connect</li>
+                <li>Click "Start Bluetooth Scan" to discover nearby devices</li>
+                <li>PayuBLE devices and other Bluetooth devices will appear in the list</li>
+                <li>Select a PayuBLE device and click Connect</li>
                 <li>Solve the challenge presented by the device</li>
-                <li>Enter your answer and submit</li>
             </ol>
         </div>
 
         <div class="status-section">
             <div class="section-title">
                 <span>🔍</span>
-                Device Scanner
+                Bluetooth Device Scanner
             </div>
             
             <div id="connectionStatus">
                 <span id="statusIndicator" class="status-indicator status-disconnected"></span>
-                <span id="statusText">Not connected</span>
+                <span id="statusText">Ready to scan</span>
             </div>
 
             <div class="controls">
-                <button id="scanBtn" onclick="startScan()">Scan for PayuBLE Devices</button>
+                <button id="scanBtn" onclick="startBluetoothScan()">Start Bluetooth Scan</button>
+                <button id="stopScanBtn" onclick="stopBluetoothScan()" disabled>Stop Scan</button>
                 <button id="connectBtn" onclick="connectToSelected()" disabled>Connect to Device</button>
                 <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+            </div>
+
+            <div id="scanProgress" class="scan-progress">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="status-indicator status-scanning"></div>
+                    <span>Scanning for Bluetooth devices... <span id="deviceCount">0</span> found</span>
+                </div>
             </div>
 
             <div id="deviceList" class="device-list" style="display: none;">
                 <!-- Discovered devices will appear here -->
             </div>
+
+            <div id="scanningIndicator" class="scanning-indicator">
+                <div>🔄 Scanning for Bluetooth devices...</div>
+                <div style="font-size: 0.9em; margin-top: 5px;">Make sure your PayuBLE device is advertising</div>
+            </div>
+        </div>
+
+        <div class="demo-controls">
+            <div class="demo-title">🧪 Demo Mode</div>
+            <button onclick="addDemoDevice()" style="background: #6c757d;">Add Demo Device</button>
+            <small style="display: block; margin-top: 5px; color: #6c757d;">
+                Use this if you don't have a real PayuBLE device for testing
+            </small>
         </div>
 
         <div id="challengeSection" class="challenge-section">
@@ -324,7 +394,7 @@
             <div style="color: #fff; margin-bottom: 10px; font-weight: bold;">Activity Log:</div>
             <div id="logOutput">
                 > PayuBLE Browser Demo initialized<br>
-                > Ready to scan for devices...<br>
+                > Ready to scan for Bluetooth devices...<br>
             </div>
         </div>
     </div>
@@ -333,14 +403,19 @@
         // Global variables
         let currentDevice = null;
         let currentService = null;
-        let currentCharacteristic = null;
+        let challengeCharacteristic = null;
+        let answerCharacteristic = null;
         let discoveredDevices = [];
         let selectedDeviceIndex = -1;
+        let isScanning = false;
 
-        // PayuBLE Service UUID (you'll need to define this based on your BLE service)
+        // PayuBLE Service UUIDs - Updated to use real UUIDs
         const PAYU_BLE_SERVICE_UUID = '12345678-1234-1234-1234-123456789abc';
         const CHALLENGE_CHARACTERISTIC_UUID = '87654321-4321-4321-4321-cba987654321';
         const ANSWER_CHARACTERISTIC_UUID = '11111111-2222-3333-4444-555555555555';
+
+        // Operation timeout settings
+        const OPERATION_TIMEOUT = 10000;
 
         // UI Helper Functions
         function updateStatus(status, text) {
@@ -371,70 +446,182 @@
 
         function updateButtons() {
             const scanBtn = document.getElementById('scanBtn');
+            const stopScanBtn = document.getElementById('stopScanBtn');
             const connectBtn = document.getElementById('connectBtn');
             const disconnectBtn = document.getElementById('disconnectBtn');
             
-            const isConnected = currentDevice && currentDevice.gatt.connected;
-            const hasSelection = selectedDeviceIndex >= 0;
+            const isConnected = currentDevice && currentDevice.gatt && currentDevice.gatt.connected;
+            const hasSelection = selectedDeviceIndex >= 0 && selectedDeviceIndex < discoveredDevices.length;
             
-            scanBtn.disabled = isConnected;
-            connectBtn.disabled = !hasSelection || isConnected;
+            scanBtn.disabled = isConnected || isScanning;
+            stopScanBtn.disabled = !isScanning;
+            connectBtn.disabled = !hasSelection || isConnected || isScanning;
             disconnectBtn.disabled = !isConnected;
         }
 
-        // Device Discovery Functions
-        async function startScan() {
-            try {
-                log('Starting device scan...');
-                updateStatus('scanning', 'Scanning for devices...');
+        function updateDeviceList() {
+            const deviceList = document.getElementById('deviceList');
+            const deviceCount = document.getElementById('deviceCount');
+            
+            if (deviceCount) {
+                deviceCount.textContent = discoveredDevices.length;
+            }
+            
+            if (discoveredDevices.length === 0) {
+                deviceList.style.display = 'none';
+                return;
+            }
+            
+            deviceList.style.display = 'block';
+            deviceList.innerHTML = '';
+            
+            discoveredDevices.forEach((device, index) => {
+                const deviceItem = document.createElement('div');
+                deviceItem.className = 'device-item';
+                if (index === selectedDeviceIndex) {
+                    deviceItem.classList.add('selected');
+                }
                 
+                const isPayuBLE = device.name && device.name.toLowerCase().includes('payuble');
+                const deviceNameDisplay = device.name || 'Unknown Device';
+                const nameColor = isPayuBLE ? '#28a745' : '#333';
+                
+                deviceItem.innerHTML = `
+                    <div class="device-name" style="color: ${nameColor}">
+                        ${isPayuBLE ? '🔐 ' : '📱 '}${deviceNameDisplay}
+                        ${isPayuBLE ? ' (PayuBLE)' : ''}
+                    </div>
+                    <div class="device-id">${device.id}</div>
+                `;
+                
+                deviceItem.onclick = () => selectDevice(index);
+                deviceList.appendChild(deviceItem);
+            });
+        }
+
+        function selectDevice(index) {
+            if (index >= 0 && index < discoveredDevices.length) {
+                selectedDeviceIndex = index;
+                updateDeviceList();
+                updateButtons();
+                
+                const device = discoveredDevices[index];
+                const isPayuBLE = device.name && device.name.toLowerCase().includes('payuble');
+                
+                log(`Selected device: ${device.name || 'Unknown'} ${isPayuBLE ? '(PayuBLE device)' : ''}`);
+                
+                if (!isPayuBLE) {
+                    showResult('⚠️ Selected device may not be a PayuBLE device', false);
+                }
+            }
+        }
+
+        function resetChallengeSection() {
+            const challengeSection = document.getElementById('challengeSection');
+            const answerInput = document.getElementById('answerInput');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            challengeSection.classList.remove('active');
+            answerInput.value = '';
+            resultMessage.style.display = 'none';
+        }
+
+        function withTimeout(promise, timeoutMs = OPERATION_TIMEOUT) {
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Operation timed out')), timeoutMs);
+            });
+            
+            return Promise.race([promise, timeoutPromise]);
+        }
+
+        // Bluetooth Scanning Functions
+        async function startBluetoothScan() {
+            if (isScanning) return;
+            
+            try {
                 // Check if Web Bluetooth is supported
                 if (!navigator.bluetooth) {
                     throw new Error('Web Bluetooth not supported in this browser');
                 }
 
-                // Request device with PayuBLE service
+                isScanning = true;
+                discoveredDevices = [];
+                selectedDeviceIndex = -1;
+                
+                log('Starting Bluetooth device scan...');
+                updateStatus('scanning', 'Opening device picker...');
+                updateButtons();
+                
+                // Show scanning UI
+                document.getElementById('scanProgress').classList.add('active');
+                document.getElementById('scanningIndicator').classList.add('active');
+                
+                // Request device using the standard device picker
+                // This works reliably across all Web Bluetooth implementations
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [
-                        { namePrefix: 'PayuBLE' },
-                        { services: [PAYU_BLE_SERVICE_UUID] }
-                    ],
-                    optionalServices: [PAYU_BLE_SERVICE_UUID]
+                    acceptAllDevices: true,
+                    optionalServices: [
+                        PAYU_BLE_SERVICE_UUID,
+                        'battery_service',
+                        'device_information'
+                    ]
                 });
 
-                log(`Found device: ${device.name || 'Unknown'} (${device.id})`);
+                log(`Device selected: ${device.name || 'Unknown'} (${device.id})`);
                 
-                // Add to discovered devices list
-                if (!discoveredDevices.find(d => d.id === device.id)) {
-                    discoveredDevices.push(device);
-                    updateDeviceList();
-                }
+                // Add device to discovered devices list
+                discoveredDevices.push(device);
+                updateDeviceList();
+                selectDevice(0);
 
-                updateStatus('disconnected', 'Devices found - select one to connect');
+                // Hide scanning UI
+                document.getElementById('scanProgress').classList.remove('active');
+                document.getElementById('scanningIndicator').classList.remove('active');
+
+                updateStatus('disconnected', 'Device selected - click Connect');
+                isScanning = false;
+                updateButtons();
                 
             } catch (error) {
                 log(`Scan failed: ${error.message}`);
-                updateStatus('disconnected', 'Scan failed');
+                
+                // Hide scanning UI
+                document.getElementById('scanProgress').classList.remove('active');
+                document.getElementById('scanningIndicator').classList.remove('active');
                 
                 if (error.name === 'NotFoundError') {
-                    showResult('No PayuBLE devices found. Make sure the device is advertising and in range.', false);
-                } else if (error.name === 'NotSupportedError') {
-                    showResult('Web Bluetooth not supported. Please use Chrome, Edge, or Opera.', false);
+                    updateStatus('disconnected', 'No device selected');
+                    showResult('No device selected. Please try again.', false);
+                } else if (error.name === 'SecurityError') {
+                    updateStatus('disconnected', 'Access denied');
+                    showResult('Bluetooth access denied. Please allow access and try again.', false);
                 } else {
-                    showResult(`Error: ${error.message}`, false);
+                    updateStatus('disconnected', 'Scan failed');
+                    showResult(`Scan error: ${error.message}`, false);
                 }
+                
+                isScanning = false;
+                updateButtons();
             }
         }
 
-        function selectDevice(index) {
-            selectedDeviceIndex = index;
-            updateDeviceList();
-            log(`Selected device: ${discoveredDevices[index].name || 'Unknown'}`);
+        function stopBluetoothScan() {
+            if (!isScanning) return;
+            
+            isScanning = false;
+            
+            // Hide scanning UI
+            document.getElementById('scanProgress').classList.remove('active');
+            document.getElementById('scanningIndicator').classList.remove('active');
+            
+            log('Scan stopped by user');
+            updateStatus('disconnected', 'Scan stopped');
+            updateButtons();
         }
 
         // Connection Functions
         async function connectToSelected() {
-            if (selectedDeviceIndex < 0) {
+            if (selectedDeviceIndex < 0 || selectedDeviceIndex >= discoveredDevices.length) {
                 showResult('Please select a device first', false);
                 return;
             }
@@ -444,93 +631,141 @@
             try {
                 log(`Connecting to ${device.name || 'Unknown'}...`);
                 updateStatus('scanning', 'Connecting...');
-
-                // Connect to GATT server
-                const server = await device.gatt.connect();
-                log('Connected to GATT server');
-
-                // Get PayuBLE service
-                const service = await server.getPrimaryService(PAYU_BLE_SERVICE_UUID);
-                log('Found PayuBLE service');
-
-                // Get challenge characteristic
-                const characteristic = await service.getCharacteristic(CHALLENGE_CHARACTERISTIC_UUID);
-                log('Found challenge characteristic');
-
-                // Store references
-                currentDevice = device;
-                currentService = service;
-                currentCharacteristic = characteristic;
+                updateButtons();
 
                 // Set up disconnect handler
                 device.addEventListener('gattserverdisconnected', onDisconnected);
 
-                updateStatus('connected', `Connected to ${device.name || 'Unknown'}`);
-                log('Connection established successfully');
-                
-                updateButtons();
-                
-                // Automatically get first challenge
-                await getNewChallenge();
+                // Connect to GATT server
+                log('Establishing GATT connection...');
+                const server = await withTimeout(device.gatt.connect());
+                log('✓ Connected to GATT server');
+
+                // Try to get PayuBLE service
+                try {
+                    log(`Looking for PayuBLE service: ${PAYU_BLE_SERVICE_UUID}`);
+                    const service = await withTimeout(server.getPrimaryService(PAYU_BLE_SERVICE_UUID));
+                    log('✓ Found PayuBLE service');
+
+                    // Get challenge characteristic
+                    log(`Getting challenge characteristic: ${CHALLENGE_CHARACTERISTIC_UUID}`);
+                    challengeCharacteristic = await withTimeout(service.getCharacteristic(CHALLENGE_CHARACTERISTIC_UUID));
+                    log('✓ Found challenge characteristic');
+
+                    // Get answer characteristic
+                    log(`Getting answer characteristic: ${ANSWER_CHARACTERISTIC_UUID}`);
+                    answerCharacteristic = await withTimeout(service.getCharacteristic(ANSWER_CHARACTERISTIC_UUID));
+                    log('✓ Found answer characteristic');
+
+                    // Store references
+                    currentDevice = device;
+                    currentService = service;
+
+                    updateStatus('connected', `Connected to ${device.name || 'Unknown'}`);
+                    log('🎉 PayuBLE connection established successfully');
+                    
+                    updateButtons();
+                    
+                    // Automatically get first challenge
+                    setTimeout(() => getNewChallenge(), 500);
+                    
+                } catch (serviceError) {
+                    log(`❌ PayuBLE service not found: ${serviceError.message}`);
+                    
+                    // Still connected but no PayuBLE service
+                    currentDevice = device;
+                    updateStatus('connected', `Connected to ${device.name || 'Unknown'} (No PayuBLE service)`);
+                    updateButtons();
+                    
+                    showResult('Connected but device does not have PayuBLE service. Try a different device.', false);
+                }
                 
             } catch (error) {
-                log(`Connection failed: ${error.message}`);
+                log(`❌ Connection failed: ${error.message}`);
                 updateStatus('disconnected', 'Connection failed');
-                showResult(`Failed to connect: ${error.message}`, false);
+                
+                if (error.name === 'NetworkError') {
+                    showResult('Failed to connect: Device not reachable. Make sure it\'s nearby and advertising.', false);
+                } else if (error.name === 'SecurityError') {
+                    showResult('Failed to connect: Access denied. Please allow Bluetooth access.', false);
+                } else if (error.message.includes('timed out')) {
+                    showResult('Failed to connect: Connection timeout. Device may be busy or out of range.', false);
+                } else {
+                    showResult(`Failed to connect: ${error.message}`, false);
+                }
+                
+                // Clean up on connection failure
+                if (device && device.removeEventListener) {
+                    device.removeEventListener('gattserverdisconnected', onDisconnected);
+                }
+                
+                currentDevice = null;
+                currentService = null;
+                challengeCharacteristic = null;
+                answerCharacteristic = null;
+                updateButtons();
             }
         }
 
-        function onDisconnected() {
-            log('Device disconnected');
+        function onDisconnected(event) {
+            log('📡 Device disconnected');
             updateStatus('disconnected', 'Device disconnected');
             
             currentDevice = null;
             currentService = null;
-            currentCharacteristic = null;
+            challengeCharacteristic = null;
+            answerCharacteristic = null;
             
-            document.getElementById('challengeSection').classList.remove('active');
+            resetChallengeSection();
             updateButtons();
         }
 
         async function disconnect() {
-            if (currentDevice && currentDevice.gatt.connected) {
+            if (currentDevice && currentDevice.gatt && currentDevice.gatt.connected) {
                 try {
+                    log('Disconnecting from device...');
                     await currentDevice.gatt.disconnect();
-                    log('Disconnected from device');
+                    log('✓ Disconnected from device');
                 } catch (error) {
-                    log(`Disconnect error: ${error.message}`);
+                    log(`❌ Disconnect error: ${error.message}`);
                 }
             }
         }
 
         // Challenge Functions
         async function getNewChallenge() {
-            if (!currentCharacteristic) {
-                showResult('Not connected to device', false);
+            if (!challengeCharacteristic) {
+                showResult('Not connected to PayuBLE service', false);
                 return;
             }
 
             try {
-                log('Requesting new challenge...');
+                log('📖 Requesting new challenge...');
                 updateStatus('challenge', 'Getting challenge...');
 
-                // Read challenge from device
-                const value = await currentCharacteristic.readValue();
+                const value = await withTimeout(challengeCharacteristic.readValue());
                 const challengeText = new TextDecoder().decode(value);
                 
-                log(`Received challenge: "${challengeText}"`);
+                log(`📝 Received challenge: "${challengeText}"`);
                 
-                // Display challenge
                 document.getElementById('challengePrompt').textContent = challengeText;
                 document.getElementById('challengeSection').classList.add('active');
-                document.getElementById('answerInput').value = '';
-                document.getElementById('answerInput').focus();
                 
+                const answerInput = document.getElementById('answerInput');
+                answerInput.value = '';
+                answerInput.focus();
+                
+                document.getElementById('resultMessage').style.display = 'none';
                 updateStatus('challenge', 'Challenge received - solve it!');
                 
             } catch (error) {
-                log(`Failed to get challenge: ${error.message}`);
-                showResult(`Error getting challenge: ${error.message}`, false);
+                log(`❌ Failed to get challenge: ${error.message}`);
+                if (error.message.includes('timed out')) {
+                    showResult('Error getting challenge: Request timeout. Try again.', false);
+                } else {
+                    showResult(`Error getting challenge: ${error.message}`, false);
+                }
+                updateStatus('connected', 'Challenge failed');
             }
         }
 
@@ -540,43 +775,56 @@
             
             if (!answer) {
                 showResult('Please enter an answer', false);
+                answerInput.focus();
                 return;
             }
 
-            if (!currentService) {
-                showResult('Not connected to device', false);
+            if (!answerCharacteristic) {
+                showResult('Not connected to PayuBLE service', false);
                 return;
             }
 
             try {
-                log(`Submitting answer: "${answer}"`);
+                log(`📤 Submitting answer: "${answer}"`);
                 
-                // Get answer characteristic
-                const answerCharacteristic = await currentService.getCharacteristic(ANSWER_CHARACTERISTIC_UUID);
-                
-                // Send answer to device
+                // Write answer to the answer characteristic
                 const encoder = new TextEncoder();
-                await answerCharacteristic.writeValue(encoder.encode(answer));
+                await withTimeout(answerCharacteristic.writeValue(encoder.encode(answer)));
+                log('✓ Answer submitted to device');
                 
-                // Read verification result
-                const resultValue = await answerCharacteristic.readValue();
+                // Wait a moment for the device to process
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Read the result from the answer characteristic
+                log('📥 Reading verification result...');
+                const resultValue = await withTimeout(answerCharacteristic.readValue());
                 const resultText = new TextDecoder().decode(resultValue);
                 
-                const isCorrect = resultText.toLowerCase().includes('correct') || resultText === '1';
+                log(`📋 Device response: "${resultText}"`);
                 
-                log(`Answer result: ${resultText}`);
+                // Check if the answer was correct
+                const isCorrect = resultText.toLowerCase().includes('correct') || 
+                                resultText.toLowerCase().includes('success') || 
+                                resultText === '1' || 
+                                resultText.toLowerCase() === 'true';
                 
                 if (isCorrect) {
                     showResult('🎉 Correct! Access granted!', true);
                     updateStatus('connected', 'Challenge solved - access granted');
+                    log('🎉 Challenge solved successfully!');
                 } else {
                     showResult('❌ Incorrect answer. Try again!', false);
                     answerInput.select();
+                    log('❌ Answer was incorrect');
                 }
                 
             } catch (error) {
-                log(`Failed to submit answer: ${error.message}`);
-                showResult(`Error submitting answer: ${error.message}`, false);
+                log(`❌ Failed to submit answer: ${error.message}`);
+                if (error.message.includes('timed out')) {
+                    showResult('Error submitting answer: Request timeout. Try again.', false);
+                } else {
+                    showResult(`Error submitting answer: ${error.message}`, false);
+                }
             }
         }
 
@@ -586,90 +834,133 @@
             }
         }
 
-        // Demo Functions for Testing
-        function simulatePayuBLEDevice() {
-            log('⚠️ Simulating PayuBLE device for demo purposes');
+        // Demo Device Functions
+        function addDemoDevice() {
+            log('🧪 Adding demo PayuBLE device for testing...');
             
-            // Mock device for demo
             const mockDevice = {
                 name: 'PayuBLE Demo Device',
-                id: 'demo-device-12345',
+                id: `demo-device-${Date.now()}`,
+                _challenges: [
+                    'What is 15 + 7?',
+                    'What has keys but cannot open locks?',
+                    'Solve: 3 × 8',
+                    'What gets wet while drying?',
+                    'What is 2 + 2?',
+                    'What programming language is this demo written in?'
+                ],
+                _answers: ['22', 'piano', 'keyboard', '24', 'towel', '4', 'javascript', 'js'],
+                _currentChallenge: '',
+                _lastResult: 'Incorrect',
                 gatt: {
                     connected: false,
-                    connect: async () => {
-                        mockDevice.gatt.connected = true;
-                        return {
-                            getPrimaryService: async () => ({
-                                getCharacteristic: async (uuid) => {
-                                    if (uuid === CHALLENGE_CHARACTERISTIC_UUID) {
-                                        return {
-                                            readValue: async () => {
-                                                const challenges = [
-                                                    'What is 15 + 7?',
-                                                    'What has keys but cannot open locks?',
-                                                    'Solve: 3 × 8',
-                                                    'What gets wet while drying?'
-                                                ];
-                                                const challenge = challenges[Math.floor(Math.random() * challenges.length)];
-                                                return new TextEncoder().encode(challenge);
+                    connect: function() {
+                        return new Promise((resolve) => {
+                            setTimeout(() => {
+                                mockDevice.gatt.connected = true;
+                                resolve({
+                                    getPrimaryService: function() {
+                                        return Promise.resolve({
+                                            getCharacteristic: function(uuid) {
+                                                if (uuid === CHALLENGE_CHARACTERISTIC_UUID) {
+                                                    return Promise.resolve({
+                                                        readValue: function() {
+                                                            const challenges = mockDevice._challenges;
+                                                            const challenge = challenges[Math.floor(Math.random() * challenges.length)];
+                                                            mockDevice._currentChallenge = challenge;
+                                                            return Promise.resolve(new TextEncoder().encode(challenge));
+                                                        }
+                                                    });
+                                                } else if (uuid === ANSWER_CHARACTERISTIC_UUID) {
+                                                    return Promise.resolve({
+                                                        writeValue: function(value) {
+                                                            const answer = new TextDecoder().decode(value).toLowerCase().trim();
+                                                            const isCorrect = mockDevice._answers.includes(answer);
+                                                            mockDevice._lastResult = isCorrect ? 'Correct! Well done!' : 'Incorrect, try again';
+                                                            return Promise.resolve();
+                                                        },
+                                                        readValue: function() {
+                                                            return Promise.resolve(new TextEncoder().encode(mockDevice._lastResult));
+                                                        }
+                                                    });
+                                                }
+                                                return Promise.reject(new Error('Characteristic not found'));
                                             }
-                                        };
-                                    } else if (uuid === ANSWER_CHARACTERISTIC_UUID) {
-                                        return {
-                                            writeValue: async (value) => {
-                                                const answer = new TextDecoder().decode(value);
-                                                // Simple validation for demo
-                                                const isCorrect = ['22', 'piano', 'keyboard', '24', 'towel'].includes(answer.toLowerCase());
-                                                mockDevice._lastResult = isCorrect ? 'Correct' : 'Incorrect';
-                                            },
-                                            readValue: async () => {
-                                                return new TextEncoder().encode(mockDevice._lastResult || 'Incorrect');
-                                            }
-                                        };
+                                        });
                                     }
-                                }
-                            })
-                        };
+                                });
+                            }, 500);
+                        });
                     },
-                    disconnect: async () => {
-                        mockDevice.gatt.connected = false;
-                        if (mockDevice.onDisconnect) mockDevice.onDisconnect();
+                    disconnect: function() {
+                        return new Promise((resolve) => {
+                            mockDevice.gatt.connected = false;
+                            setTimeout(() => {
+                                if (mockDevice._onDisconnect) {
+                                    mockDevice._onDisconnect();
+                                }
+                                resolve();
+                            }, 100);
+                        });
                     }
                 },
-                addEventListener: (event, handler) => {
+                addEventListener: function(event, handler) {
                     if (event === 'gattserverdisconnected') {
-                        mockDevice.onDisconnect = handler;
+                        mockDevice._onDisconnect = handler;
+                    }
+                },
+                removeEventListener: function(event, handler) {
+                    if (event === 'gattserverdisconnected') {
+                        mockDevice._onDisconnect = null;
                     }
                 }
             };
 
-            discoveredDevices.push(mockDevice);
-            updateDeviceList();
-            
-            showResult('Demo device added! Select it and click Connect.', true);
+            // Add to device list
+            const existingIndex = discoveredDevices.findIndex(d => d.name === mockDevice.name);
+            if (existingIndex === -1) {
+                discoveredDevices.push(mockDevice);
+                updateDeviceList();
+                selectDevice(discoveredDevices.length - 1);
+                showResult('Demo device added! Click Connect to test.', true);
+                log('✓ Demo device ready for connection');
+            } else {
+                selectDevice(existingIndex);
+                showResult('Demo device already exists and selected.', true);
+            }
         }
 
         // Initialize demo
         function initDemo() {
-            log('PayuBLE Browser Demo initialized');
-            log('Click "Scan for PayuBLE Devices" to begin');
+            log('🚀 PayuBLE Browser Demo initialized');
+            updateButtons();
             
             // Check Web Bluetooth support
             if (!navigator.bluetooth) {
-                log('⚠️ Web Bluetooth not supported');
-                showResult('Web Bluetooth not supported in this browser. Please use Chrome, Edge, or Opera on HTTPS.', false);
+                log('❌ Web Bluetooth not supported in this browser');
+                showResult('Web Bluetooth not supported. Please use Chrome, Edge, or Opera on HTTPS/localhost.', false);
                 
-                // Add demo device for testing
+                // Auto-add demo device for testing
                 setTimeout(() => {
-                    log('Adding simulated device for testing...');
-                    simulatePayuBLEDevice();
-                }, 2000);
+                    log('🧪 Auto-adding demo device for testing...');
+                    addDemoDevice();
+                }, 1000);
             } else {
-                log('✓ Web Bluetooth API available');
+                log('✅ Web Bluetooth API available');
+                log('✅ Browser supports Bluetooth device discovery');
+                log('📱 Click "Start Bluetooth Scan" to discover nearby devices');
             }
-            
-            updateButtons();
         }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (isScanning) {
+                isScanning = false;
+            }
+            if (currentDevice && currentDevice.gatt && currentDevice.gatt.connected) {
+                currentDevice.gatt.disconnect().catch(() => {});
+            }
+        });
 
         // Start demo when page loads
         window.addEventListener('DOMContentLoaded', initDemo);
