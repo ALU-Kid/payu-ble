@@ -1,0 +1,93 @@
+# Source files (compiled to dist/)
+src/
+platform/src/
+test/
+
+# Development configuration
+.eslintrc.js
+.eslintrc.json
+jest.config.js
+tsconfig.json
+platform/tsconfig.json
+test/setup.ts
+
+# Build artifacts and cache
+*.tsbuildinfo
+coverage/
+.nyc_output
+.cache
+
+# Development dependencies
+node_modules/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env*
+!.env.example
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD files
+.github/
+.travis.yml
+.circleci/
+.gitlab-ci.yml
+azure-pipelines.yml
+
+# Development scripts
+scripts/
+!scripts/check-platform.js
+
+# Documentation source files (keep compiled docs)
+docs/src/
+*.draft.md
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+**/__tests__/
+test/
+
+# Development tools
+.eslintcache
+.stylelintcache
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Platform-specific generated files
+platform-capabilities.json
+setup-*.sh
+
+# Keep only these files in the published package:
+# - dist/ (compiled TypeScript)
+# - platform/dist/ (compiled platform modules)
+# - demo/browser/ (Web Bluetooth demo)
+# - examples/ (Node.js examples) 
+# - docs/ (documentation)
+# - README.md
+# - LICENSE
+# - package.json

@@ -1,0 +1,70 @@
+{
+  "platform": "linux",
+  "arch": "arm64",
+  "nodeVersion": "v18.17.0",
+  "capabilities": {
+    "gpio": true,
+    "networking": true,
+    "gps": true,
+    "ipGeolocation": true
+  },
+  "dependencies": {
+    "onoff": {
+      "available": true,
+      "functional": true
+    },
+    "arp-a": {
+      "available": true,
+      "functional": true
+    },
+    "ping": {
+      "available": true,
+      "functional": true
+    },
+    "node-fetch": {
+      "available": true,
+      "functional": true
+    }
+  },
+  "recommendations": [
+    "Enable GPIO interface",
+    "Add user to gpio group",
+    "Install platform dependencies"
+  ],
+  "timestamp": "2025-01-03T10:30:00.000Z",
+  "hardwareInfo": {
+    "hasGPIO": true,
+    "gpioPath": "/sys/class/gpio",
+    "gpioWritable": true,
+    "networkInterfaces": ["eth0", "wlan0"],
+    "isRaspberryPi": true
+  },
+  "performanceMetrics": {
+    "challengeCreationTime": "2.5ms",
+    "hashComputationTime": "1.2ms",
+    "memoryUsage": {
+      "rss": "45MB",
+      "heapTotal": "12MB",
+      "heapUsed": "8MB"
+    }
+  },
+  "systemCommands": {
+    "arp": {
+      "available": true,
+      "command": "arp -a",
+      "testResult": "success"
+    },
+    "ping": {
+      "available": true,
+      "command": "ping -c 1 8.8.8.8",
+      "testResult": "success"
+    }
+  },
+  "environmentChecks": {
+    "nodeVersion": "18.17.0",
+    "npmVersion": "9.6.7",
+    "pythonAvailable": true,
+    "buildToolsAvailable": true,
+    "internetConnectivity": true
+  }
+}

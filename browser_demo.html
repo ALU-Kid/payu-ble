@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayuBLE Browser Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-disconnected { background: #dc3545; }
+        .status-scanning { background: #ffc107; animation: pulse 1s infinite; }
+        .status-connected { background: #28a745; }
+        .status-challenge { background: #007bff; animation: pulse 1s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .device-list {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 15px 0;
+            padding: 10px;
+        }
+
+        .device-item {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-radius: 6px;
+            margin-bottom: 5px;
+        }
+
+        .device-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .device-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .device-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .device-id {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .challenge-section {
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .challenge-section.active {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .challenge-prompt {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .answer-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+
+        .answer-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .result-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .result-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .log-section {
+            margin-top: 30px;
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ffeaa7;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #bee5eb;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 PayuBLE Browser Demo</h1>
+        
+        <div class="warning">
+            ⚠️ <strong>Web Bluetooth Required:</strong> This demo requires a browser with Web Bluetooth support (Chrome, Edge, Opera) and HTTPS or localhost.
+        </div>
+
+        <div class="info-box">
+            📱 <strong>How to use:</strong> 
+            <ol style="margin-top: 10px; margin-left: 20px;">
+                <li>Click "Scan for PayuBLE Devices" to discover nearby devices</li>
+                <li>Select a device from the list to connect</li>
+                <li>Solve the challenge presented by the device</li>
+                <li>Enter your answer and submit</li>
+            </ol>
+        </div>
+
+        <div class="status-section">
+            <div class="section-title">
+                <span>🔍</span>
+                Device Scanner
+            </div>
+            
+            <div id="connectionStatus">
+                <span id="statusIndicator" class="status-indicator status-disconnected"></span>
+                <span id="statusText">Not connected</span>
+            </div>
+
+            <div class="controls">
+                <button id="scanBtn" onclick="startScan()">Scan for PayuBLE Devices</button>
+                <button id="connectBtn" onclick="connectToSelected()" disabled>Connect to Device</button>
+                <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+            </div>
+
+            <div id="deviceList" class="device-list" style="display: none;">
+                <!-- Discovered devices will appear here -->
+            </div>
+        </div>
+
+        <div id="challengeSection" class="challenge-section">
+            <div class="section-title">
+                <span>🧩</span>
+                Device Challenge
+            </div>
+            
+            <div id="challengePrompt" class="challenge-prompt">
+                <!-- Challenge text will appear here -->
+            </div>
+            
+            <input type="text" id="answerInput" class="answer-input" placeholder="Enter your answer..." onkeypress="handleAnswerKeypress(event)">
+            
+            <div class="controls">
+                <button onclick="submitAnswer()">Submit Answer</button>
+                <button onclick="getNewChallenge()">Get New Challenge</button>
+            </div>
+            
+            <div id="resultMessage" class="result-message" style="display: none;">
+                <!-- Result will appear here -->
+            </div>
+        </div>
+
+        <div class="log-section">
+            <div style="color: #fff; margin-bottom: 10px; font-weight: bold;">Activity Log:</div>
+            <div id="logOutput">
+                > PayuBLE Browser Demo initialized<br>
+                > Ready to scan for devices...<br>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentDevice = null;
+        let currentService = null;
+        let currentCharacteristic = null;
+        let discoveredDevices = [];
+        let selectedDeviceIndex = -1;
+
+        // PayuBLE Service UUID (you'll need to define this based on your BLE service)
+        const PAYU_BLE_SERVICE_UUID = '12345678-1234-1234-1234-123456789abc';
+        const CHALLENGE_CHARACTERISTIC_UUID = '87654321-4321-4321-4321-cba987654321';
+        const ANSWER_CHARACTERISTIC_UUID = '11111111-2222-3333-4444-555555555555';
+
+        // UI Helper Functions
+        function updateStatus(status, text) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            indicator.className = `status-indicator status-${status}`;
+            statusText.textContent = text;
+        }
+
+        function log(message) {
+            const logOutput = document.getElementById('logOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            logOutput.innerHTML += `> [${timestamp}] ${message}<br>`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function showResult(message, isSuccess) {
+            const resultDiv = document.getElementById('resultMessage');
+            resultDiv.textContent = message;
+            resultDiv.className = `result-message ${isSuccess ? 'result-success' : 'result-error'}`;
+            resultDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                resultDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function updateButtons() {
+            const scanBtn = document.getElementById('scanBtn');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            
+            const isConnected = currentDevice && currentDevice.gatt.connected;
+            const hasSelection = selectedDeviceIndex >= 0;
+            
+            scanBtn.disabled = isConnected;
+            connectBtn.disabled = !hasSelection || isConnected;
+            disconnectBtn.disabled = !isConnected;
+        }
+
+        // Device Discovery Functions
+        async function startScan() {
+            try {
+                log('Starting device scan...');
+                updateStatus('scanning', 'Scanning for devices...');
+                
+                // Check if Web Bluetooth is supported
+                if (!navigator.bluetooth) {
+                    throw new Error('Web Bluetooth not supported in this browser');
+                }
+
+                // Request device with PayuBLE service
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { namePrefix: 'PayuBLE' },
+                        { services: [PAYU_BLE_SERVICE_UUID] }
+                    ],
+                    optionalServices: [PAYU_BLE_SERVICE_UUID]
+                });
+
+                log(`Found device: ${device.name || 'Unknown'} (${device.id})`);
+                
+                // Add to discovered devices list
+                if (!discoveredDevices.find(d => d.id === device.id)) {
+                    discoveredDevices.push(device);
+                    updateDeviceList();
+                }
+
+                updateStatus('disconnected', 'Devices found - select one to connect');
+                
+            } catch (error) {
+                log(`Scan failed: ${error.message}`);
+                updateStatus('disconnected', 'Scan failed');
+                
+                if (error.name === 'NotFoundError') {
+                    showResult('No PayuBLE devices found. Make sure the device is advertising and in range.', false);
+                } else if (error.name === 'NotSupportedError') {
+                    showResult('Web Bluetooth not supported. Please use Chrome, Edge, or Opera.', false);
+                } else {
+                    showResult(`Error: ${error.message}`, false);
+                }
+            }
+        }
+
+        function selectDevice(index) {
+            selectedDeviceIndex = index;
+            updateDeviceList();
+            log(`Selected device: ${discoveredDevices[index].name || 'Unknown'}`);
+        }
+
+        // Connection Functions
+        async function connectToSelected() {
+            if (selectedDeviceIndex < 0) {
+                showResult('Please select a device first', false);
+                return;
+            }
+
+            const device = discoveredDevices[selectedDeviceIndex];
+            
+            try {
+                log(`Connecting to ${device.name || 'Unknown'}...`);
+                updateStatus('scanning', 'Connecting...');
+
+                // Connect to GATT server
+                const server = await device.gatt.connect();
+                log('Connected to GATT server');
+
+                // Get PayuBLE service
+                const service = await server.getPrimaryService(PAYU_BLE_SERVICE_UUID);
+                log('Found PayuBLE service');
+
+                // Get challenge characteristic
+                const characteristic = await service.getCharacteristic(CHALLENGE_CHARACTERISTIC_UUID);
+                log('Found challenge characteristic');
+
+                // Store references
+                currentDevice = device;
+                currentService = service;
+                currentCharacteristic = characteristic;
+
+                // Set up disconnect handler
+                device.addEventListener('gattserverdisconnected', onDisconnected);
+
+                updateStatus('connected', `Connected to ${device.name || 'Unknown'}`);
+                log('Connection established successfully');
+                
+                updateButtons();
+                
+                // Automatically get first challenge
+                await getNewChallenge();
+                
+            } catch (error) {
+                log(`Connection failed: ${error.message}`);
+                updateStatus('disconnected', 'Connection failed');
+                showResult(`Failed to connect: ${error.message}`, false);
+            }
+        }
+
+        function onDisconnected() {
+            log('Device disconnected');
+            updateStatus('disconnected', 'Device disconnected');
+            
+            currentDevice = null;
+            currentService = null;
+            currentCharacteristic = null;
+            
+            document.getElementById('challengeSection').classList.remove('active');
+            updateButtons();
+        }
+
+        async function disconnect() {
+            if (currentDevice && currentDevice.gatt.connected) {
+                try {
+                    await currentDevice.gatt.disconnect();
+                    log('Disconnected from device');
+                } catch (error) {
+                    log(`Disconnect error: ${error.message}`);
+                }
+            }
+        }
+
+        // Challenge Functions
+        async function getNewChallenge() {
+            if (!currentCharacteristic) {
+                showResult('Not connected to device', false);
+                return;
+            }
+
+            try {
+                log('Requesting new challenge...');
+                updateStatus('challenge', 'Getting challenge...');
+
+                // Read challenge from device
+                const value = await currentCharacteristic.readValue();
+                const challengeText = new TextDecoder().decode(value);
+                
+                log(`Received challenge: "${challengeText}"`);
+                
+                // Display challenge
+                document.getElementById('challengePrompt').textContent = challengeText;
+                document.getElementById('challengeSection').classList.add('active');
+                document.getElementById('answerInput').value = '';
+                document.getElementById('answerInput').focus();
+                
+                updateStatus('challenge', 'Challenge received - solve it!');
+                
+            } catch (error) {
+                log(`Failed to get challenge: ${error.message}`);
+                showResult(`Error getting challenge: ${error.message}`, false);
+            }
+        }
+
+        async function submitAnswer() {
+            const answerInput = document.getElementById('answerInput');
+            const answer = answerInput.value.trim();
+            
+            if (!answer) {
+                showResult('Please enter an answer', false);
+                return;
+            }
+
+            if (!currentService) {
+                showResult('Not connected to device', false);
+                return;
+            }
+
+            try {
+                log(`Submitting answer: "${answer}"`);
+                
+                // Get answer characteristic
+                const answerCharacteristic = await currentService.getCharacteristic(ANSWER_CHARACTERISTIC_UUID);
+                
+                // Send answer to device
+                const encoder = new TextEncoder();
+                await answerCharacteristic.writeValue(encoder.encode(answer));
+                
+                // Read verification result
+                const resultValue = await answerCharacteristic.readValue();
+                const resultText = new TextDecoder().decode(resultValue);
+                
+                const isCorrect = resultText.toLowerCase().includes('correct') || resultText === '1';
+                
+                log(`Answer result: ${resultText}`);
+                
+                if (isCorrect) {
+                    showResult('🎉 Correct! Access granted!', true);
+                    updateStatus('connected', 'Challenge solved - access granted');
+                } else {
+                    showResult('❌ Incorrect answer. Try again!', false);
+                    answerInput.select();
+                }
+                
+            } catch (error) {
+                log(`Failed to submit answer: ${error.message}`);
+                showResult(`Error submitting answer: ${error.message}`, false);
+            }
+        }
+
+        function handleAnswerKeypress(event) {
+            if (event.key === 'Enter') {
+                submitAnswer();
+            }
+        }
+
+        // Demo Functions for Testing
+        function simulatePayuBLEDevice() {
+            log('⚠️ Simulating PayuBLE device for demo purposes');
+            
+            // Mock device for demo
+            const mockDevice = {
+                name: 'PayuBLE Demo Device',
+                id: 'demo-device-12345',
+                gatt: {
+                    connected: false,
+                    connect: async () => {
+                        mockDevice.gatt.connected = true;
+                        return {
+                            getPrimaryService: async () => ({
+                                getCharacteristic: async (uuid) => {
+                                    if (uuid === CHALLENGE_CHARACTERISTIC_UUID) {
+                                        return {
+                                            readValue: async () => {
+                                                const challenges = [
+                                                    'What is 15 + 7?',
+                                                    'What has keys but cannot open locks?',
+                                                    'Solve: 3 × 8',
+                                                    'What gets wet while drying?'
+                                                ];
+                                                const challenge = challenges[Math.floor(Math.random() * challenges.length)];
+                                                return new TextEncoder().encode(challenge);
+                                            }
+                                        };
+                                    } else if (uuid === ANSWER_CHARACTERISTIC_UUID) {
+                                        return {
+                                            writeValue: async (value) => {
+                                                const answer = new TextDecoder().decode(value);
+                                                // Simple validation for demo
+                                                const isCorrect = ['22', 'piano', 'keyboard', '24', 'towel'].includes(answer.toLowerCase());
+                                                mockDevice._lastResult = isCorrect ? 'Correct' : 'Incorrect';
+                                            },
+                                            readValue: async () => {
+                                                return new TextEncoder().encode(mockDevice._lastResult || 'Incorrect');
+                                            }
+                                        };
+                                    }
+                                }
+                            })
+                        };
+                    },
+                    disconnect: async () => {
+                        mockDevice.gatt.connected = false;
+                        if (mockDevice.onDisconnect) mockDevice.onDisconnect();
+                    }
+                },
+                addEventListener: (event, handler) => {
+                    if (event === 'gattserverdisconnected') {
+                        mockDevice.onDisconnect = handler;
+                    }
+                }
+            };
+
+            discoveredDevices.push(mockDevice);
+            updateDeviceList();
+            
+            showResult('Demo device added! Select it and click Connect.', true);
+        }
+
+        // Initialize demo
+        function initDemo() {
+            log('PayuBLE Browser Demo initialized');
+            log('Click "Scan for PayuBLE Devices" to begin');
+            
+            // Check Web Bluetooth support
+            if (!navigator.bluetooth) {
+                log('⚠️ Web Bluetooth not supported');
+                showResult('Web Bluetooth not supported in this browser. Please use Chrome, Edge, or Opera on HTTPS.', false);
+                
+                // Add demo device for testing
+                setTimeout(() => {
+                    log('Adding simulated device for testing...');
+                    simulatePayuBLEDevice();
+                }, 2000);
+            } else {
+                log('✓ Web Bluetooth API available');
+            }
+            
+            updateButtons();
+        }
+
+        // Start demo when page loads
+        window.addEventListener('DOMContentLoaded', initDemo);
+    </script>
+</body>
+</html>

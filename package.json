@@ -1,0 +1,125 @@
+{
+  "name": "payu-ble",
+  "version": "1.0.0",
+  "description": "A flexible, smart Bluetooth Low Energy challenge system for secure device connections",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:platform": "tsc -p platform/tsconfig.json",
+    "build:all": "npm run build && npm run build:platform",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts platform/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts platform/**/*.ts --fix",
+    "demo:math": "node examples/math-challenges.js",
+    "demo:riddles": "node examples/riddles-demo.js",
+    "demo:availability": "node examples/availability-demo.js",
+    "demo:interactive": "node examples/interactive-riddles.js",
+    "demo:browser": "cd demo/browser && python -m http.server 8000",
+    "clean": "rimraf dist platform/dist",
+    "prepublishOnly": "npm run clean && npm run build:all && npm run test",
+    "postinstall": "node scripts/check-platform.js"
+  },
+  "keywords": [
+    "bluetooth",
+    "ble",
+    "security",
+    "challenge",
+    "iot",
+    "pairing",
+    "authentication",
+    "raspberry-pi",
+    "gpio",
+    "geolocation",
+    "network-detection"
+  ],
+  "author": "PayuBLE Team",
+  "license": "MIT",
+  "dependencies": {},
+  "optionalDependencies": {
+    "onoff": "^6.0.3",
+    "arp-a": "^1.0.0",
+    "ping": "^0.4.4",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/jest": "^29.5.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0",
+    "rimraf": "^5.0.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=4.5.0"
+  },
+  "files": [
+    "dist/**/*",
+    "platform/dist/**/*",
+    "demo/browser/**/*",
+    "examples/**/*",
+    "docs/**/*",
+    "README.md",
+    "LICENSE",
+    "scripts/check-platform.js"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./platform": {
+      "import": "./platform/dist/index.js",
+      "require": "./platform/dist/index.js",
+      "types": "./platform/dist/index.d.ts"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/payu-ble.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/payu-ble/issues"
+  },
+  "homepage": "https://github.com/yourusername/payu-ble#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/src", "<rootDir>/test"],
+    "testMatch": ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "platform/**/*.ts",
+      "!src/**/*.d.ts",
+      "!platform/**/*.d.ts"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"]
+  },
+  "eslintConfig": {
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["@typescript-eslint"],
+    "extends": [
+      "eslint:recommended",
+      "@typescript-eslint/recommended"
+    ],
+    "env": {
+      "node": true,
+      "es2020": true
+    },
+    "rules": {
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": "error"
+    }
+  }
+}
