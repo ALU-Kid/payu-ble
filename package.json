@@ -83,12 +83,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/payu-ble.git"
+    "url": "https://github.com/ALU-Kid/payu-ble.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/payu-ble/issues"
+    "url": "https://github.com/ALU-Kid/payu-ble/issues"
   },
-  "homepage": "https://github.com/yourusername/payu-ble#readme",
+  "homepage": "https://github.com/ALU-Kid/payu-ble#readme",
   "engines": {
     "node": ">=14.0.0"
   },
