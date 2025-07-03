@@ -2,12 +2,17 @@
   "name": "@rwesa/payu-ble",
   "version": "1.0.3",
   "description": "A flexible, smart Bluetooth Low Energy challenge system for secure device connections",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "build:platform": "tsc -p platform/tsconfig.json",
-    "build:all": "npm run build && npm run build:platform",
+    "build": "npm run build:esm && npm run build:cjs",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:platform": "npm run build:platform:esm && npm run build:platform:cjs",
+    "build:platform:esm": "tsc -p platform/tsconfig.esm.json",
+    "build:platform:cjs": "tsc -p platform/tsconfig.cjs.json",
+    "build:all": "npm run clean && npm run build && npm run build:platform",
     "dev": "tsc --watch",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -72,12 +77,12 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
-      "require": "./dist/index.js",
+      "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     },
     "./platform": {
       "import": "./platform/dist/index.js",
-      "require": "./platform/dist/index.js",
+      "require": "./platform/dist/index.cjs",
       "types": "./platform/dist/index.d.ts"
     }
   },
