@@ -1,6 +1,6 @@
 {
   "name": "@rwesa/payu-ble",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A flexible, smart Bluetooth Low Energy challenge system for secure device connections",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -95,8 +95,14 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "roots": ["<rootDir>/src", "<rootDir>/test"],
-    "testMatch": ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/test"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.ts",
+      "**/?(*.)+(spec|test).ts"
+    ],
     "collectCoverageFrom": [
       "src/**/*.ts",
       "platform/**/*.ts",
@@ -104,11 +110,17 @@
       "!platform/**/*.d.ts"
     ],
     "coverageDirectory": "coverage",
-    "coverageReporters": ["text", "lcov", "html"]
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ]
   },
   "eslintConfig": {
     "parser": "@typescript-eslint/parser",
-    "plugins": ["@typescript-eslint"],
+    "plugins": [
+      "@typescript-eslint"
+    ],
     "extends": [
       "eslint:recommended",
       "@typescript-eslint/recommended"
