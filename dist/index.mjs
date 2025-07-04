@@ -1,4 +1,118 @@
 import { createHash } from 'crypto';
+import { execSync } from 'child_process';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+
+// src/index.ts
+function getHardwareDeviceId() {
+  try {
+    const hardwareId = detectHardwareId();
+    if (hardwareId) {
+      return hardwareId;
+    }
+  } catch (error) {
+  }
+  return getFallbackDeviceId();
+}
+function detectHardwareId() {
+  const platform = process.platform;
+  try {
+    switch (platform) {
+      case "linux":
+        return getLinuxMachineId();
+      case "darwin":
+        return getMacOSHardwareId();
+      case "win32":
+        return getWindowsHardwareId();
+      default:
+        return null;
+    }
+  } catch (error) {
+    return null;
+  }
+}
+function getLinuxMachineId() {
+  const machineIdPaths = [
+    "/etc/machine-id",
+    "/var/lib/dbus/machine-id"
+  ];
+  for (const path of machineIdPaths) {
+    try {
+      if (existsSync(path)) {
+        const id = readFileSync(path, "utf8").trim();
+        if (id && id.length > 0) {
+          return createHash("sha256").update(id).digest("hex").substring(0, 16);
+        }
+      }
+    } catch (error) {
+      continue;
+    }
+  }
+  try {
+    const cpuInfo = readFileSync("/proc/cpuinfo", "utf8");
+    const serialMatch = cpuInfo.match(/Serial\s*:\s*([a-f0-9]+)/i);
+    if (serialMatch && serialMatch[1]) {
+      return createHash("sha256").update(serialMatch[1]).digest("hex").substring(0, 16);
+    }
+  } catch (error) {
+  }
+  return null;
+}
+function getMacOSHardwareId() {
+  try {
+    const output = execSync('system_profiler SPHardwareDataType | grep "Hardware UUID"', {
+      encoding: "utf8",
+      timeout: 5e3
+    });
+    const match = output.match(/Hardware UUID:\s*([A-F0-9-]+)/i);
+    if (match && match[1]) {
+      return createHash("sha256").update(match[1]).digest("hex").substring(0, 16);
+    }
+  } catch (error) {
+  }
+  return null;
+}
+function getWindowsHardwareId() {
+  try {
+    const output = execSync("wmic csproduct get uuid /value", {
+      encoding: "utf8",
+      timeout: 5e3
+    });
+    const match = output.match(/UUID=([A-F0-9-]+)/i);
+    if (match && match[1]) {
+      return createHash("sha256").update(match[1]).digest("hex").substring(0, 16);
+    }
+  } catch (error) {
+  }
+  return null;
+}
+function getFallbackDeviceId() {
+  const fallbackPath = join(homedir(), ".payu-ble-id");
+  try {
+    if (existsSync(fallbackPath)) {
+      const stored = readFileSync(fallbackPath, "utf8").trim();
+      if (stored && stored.length > 0) {
+        return stored;
+      }
+    }
+  } catch (error) {
+  }
+  const uuid = generateUUID();
+  const deviceId = createHash("sha256").update(uuid).digest("hex").substring(0, 16);
+  try {
+    writeFileSync(fallbackPath, deviceId, "utf8");
+  } catch (error) {
+  }
+  return deviceId;
+}
+function generateUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === "x" ? r : r & 3 | 8;
+    return v.toString(16);
+  });
+}
 
 // src/index.ts
 var PayuBLE = class {
@@ -238,6 +352,6 @@ var getDeviceId = () => defaultInstance.getDeviceId();
 var clearChallenge = () => defaultInstance.clearChallenge();
 var index_default = PayuBLE;
 
-export { PayuBLE, clearChallenge, createChallenge, index_default as default, getCurrentChallenge, getDeviceId, helpers, isDeviceAvailable, setBLEAvailability, verifyAnswer };
+export { PayuBLE, clearChallenge, createChallenge, index_default as default, getCurrentChallenge, getDeviceId, getHardwareDeviceId, helpers, isDeviceAvailable, setBLEAvailability, verifyAnswer };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

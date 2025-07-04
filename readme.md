@@ -156,6 +156,64 @@ setBLEAvailability(() => {
 });
 ```
 
+## Device Identity
+
+The `getHardwareDeviceId()` helper provides a consistent, unique device identifier that persists across application restarts. This is particularly useful for incorporating device-specific data into challenges and ensuring consistent behavior.
+
+### ESM Usage
+```typescript
+import { getHardwareDeviceId } from '@rwesa/payu-ble';
+
+// Get consistent device ID
+const deviceId = getHardwareDeviceId();
+console.log(deviceId); // "a1b2c3d4e5f6a7b8"
+
+// Use in arithmetic formulas
+const challenge = createChallenge({
+  type: 'custom',
+  formula: () => {
+    const id = getHardwareDeviceId();
+    const numericId = parseInt(id.substring(0, 8), 16) % 1000;
+    return `Calculate: ${numericId} + 42`;
+  },
+  validate: (input) => {
+    const id = getHardwareDeviceId();
+    const numericId = parseInt(id.substring(0, 8), 16) % 1000;
+    return parseInt(input) === numericId + 42;
+  }
+});
+```
+
+### CommonJS Usage
+```javascript
+const { getHardwareDeviceId } = require('@rwesa/payu-ble');
+
+// Get consistent device ID
+const deviceId = getHardwareDeviceId();
+
+// Strip characters for formulas
+const numericId = deviceId.replace(/[^0-9]/g, '').substring(0, 6);
+console.log(numericId); // "123456" (numbers only)
+```
+
+### Platform Compatibility
+
+The helper automatically detects hardware IDs using platform-specific methods:
+
+- **Linux**: Uses `/etc/machine-id` or `/var/lib/dbus/machine-id`
+- **Raspberry Pi**: Falls back to CPU serial from `/proc/cpuinfo`
+- **macOS**: Uses `system_profiler` to get Hardware UUID
+- **Windows**: Uses `wmic csproduct get uuid`
+
+### Fallback Strategy
+
+If no hardware ID is available, the function:
+1. Generates a UUID and stores it in `~/.payu-ble-id`
+2. Reuses the stored UUID on subsequent calls
+3. Ensures consistency across application restarts
+
+This makes the device ID reliable across different platforms and environments.
+
 ## Advanced Examples
 
 ### Company Device Verification

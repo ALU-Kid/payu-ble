@@ -1,3 +1,5 @@
+declare function getHardwareDeviceId(): string;
+
 interface ChallengeOptions {
     type: 'arithmetic' | 'hash' | 'custom';
     difficulty?: 1 | 2 | 3 | 4;
@@ -62,4 +64,4 @@ declare const isDeviceAvailable: () => boolean;
 declare const getDeviceId: () => string;
 declare const clearChallenge: () => void;
 
-export { type Challenge, type ChallengeOptions, PayuBLE, type PayuBLEState, clearChallenge, createChallenge, PayuBLE as default, getCurrentChallenge, getDeviceId, helpers, isDeviceAvailable, setBLEAvailability, verifyAnswer };
+export { type Challenge, type ChallengeOptions, PayuBLE, type PayuBLEState, clearChallenge, createChallenge, PayuBLE as default, getCurrentChallenge, getDeviceId, getHardwareDeviceId, helpers, isDeviceAvailable, setBLEAvailability, verifyAnswer };

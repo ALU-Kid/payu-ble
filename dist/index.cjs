@@ -3,6 +3,120 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var crypto = require('crypto');
+var child_process = require('child_process');
+var fs = require('fs');
+var path = require('path');
+var os = require('os');
+
+// src/index.ts
+function getHardwareDeviceId() {
+  try {
+    const hardwareId = detectHardwareId();
+    if (hardwareId) {
+      return hardwareId;
+    }
+  } catch (error) {
+  }
+  return getFallbackDeviceId();
+}
+function detectHardwareId() {
+  const platform = process.platform;
+  try {
+    switch (platform) {
+      case "linux":
+        return getLinuxMachineId();
+      case "darwin":
+        return getMacOSHardwareId();
+      case "win32":
+        return getWindowsHardwareId();
+      default:
+        return null;
+    }
+  } catch (error) {
+    return null;
+  }
+}
+function getLinuxMachineId() {
+  const machineIdPaths = [
+    "/etc/machine-id",
+    "/var/lib/dbus/machine-id"
+  ];
+  for (const path of machineIdPaths) {
+    try {
+      if (fs.existsSync(path)) {
+        const id = fs.readFileSync(path, "utf8").trim();
+        if (id && id.length > 0) {
+          return crypto.createHash("sha256").update(id).digest("hex").substring(0, 16);
+        }
+      }
+    } catch (error) {
+      continue;
+    }
+  }
+  try {
+    const cpuInfo = fs.readFileSync("/proc/cpuinfo", "utf8");
+    const serialMatch = cpuInfo.match(/Serial\s*:\s*([a-f0-9]+)/i);
+    if (serialMatch && serialMatch[1]) {
+      return crypto.createHash("sha256").update(serialMatch[1]).digest("hex").substring(0, 16);
+    }
+  } catch (error) {
+  }
+  return null;
+}
+function getMacOSHardwareId() {
+  try {
+    const output = child_process.execSync('system_profiler SPHardwareDataType | grep "Hardware UUID"', {
+      encoding: "utf8",
+      timeout: 5e3
+    });
+    const match = output.match(/Hardware UUID:\s*([A-F0-9-]+)/i);
+    if (match && match[1]) {
+      return crypto.createHash("sha256").update(match[1]).digest("hex").substring(0, 16);
+    }
+  } catch (error) {
+  }
+  return null;
+}
+function getWindowsHardwareId() {
+  try {
+    const output = child_process.execSync("wmic csproduct get uuid /value", {
+      encoding: "utf8",
+      timeout: 5e3
+    });
+    const match = output.match(/UUID=([A-F0-9-]+)/i);
+    if (match && match[1]) {
+      return crypto.createHash("sha256").update(match[1]).digest("hex").substring(0, 16);
+    }
+  } catch (error) {
+  }
+  return null;
+}
+function getFallbackDeviceId() {
+  const fallbackPath = path.join(os.homedir(), ".payu-ble-id");
+  try {
+    if (fs.existsSync(fallbackPath)) {
+      const stored = fs.readFileSync(fallbackPath, "utf8").trim();
+      if (stored && stored.length > 0) {
+        return stored;
+      }
+    }
+  } catch (error) {
+  }
+  const uuid = generateUUID();
+  const deviceId = crypto.createHash("sha256").update(uuid).digest("hex").substring(0, 16);
+  try {
+    fs.writeFileSync(fallbackPath, deviceId, "utf8");
+  } catch (error) {
+  }
+  return deviceId;
+}
+function generateUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === "x" ? r : r & 3 | 8;
+    return v.toString(16);
+  });
+}
 
 // src/index.ts
 var PayuBLE = class {
@@ -248,6 +362,7 @@ exports.createChallenge = createChallenge;
 exports.default = index_default;
 exports.getCurrentChallenge = getCurrentChallenge;
 exports.getDeviceId = getDeviceId;
+exports.getHardwareDeviceId = getHardwareDeviceId;
 exports.helpers = helpers;
 exports.isDeviceAvailable = isDeviceAvailable;
 exports.setBLEAvailability = setBLEAvailability;

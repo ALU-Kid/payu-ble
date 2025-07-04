@@ -318,6 +318,9 @@ export const helpers = {
 // Export the main class
 export { PayuBLE };
 
+// Export helper functions
+export { getHardwareDeviceId } from './helpers/hardwareId';
+
 // Default instance for convenience
 const defaultInstance = new PayuBLE();
 
