@@ -3,16 +3,11 @@
   "version": "1.0.3",
   "description": "A flexible, smart Bluetooth Low Energy challenge system for secure device connections",
   "main": "dist/index.cjs",
-  "module": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "npm run build:esm && npm run build:cjs",
-    "build:esm": "tsc -p tsconfig.esm.json",
-    "build:cjs": "tsc -p tsconfig.cjs.json",
-    "build:platform": "npm run build:platform:esm && npm run build:platform:cjs",
-    "build:platform:esm": "tsc -p platform/tsconfig.esm.json",
-    "build:platform:cjs": "tsc -p platform/tsconfig.cjs.json",
-    "build:all": "npm run clean && npm run build && npm run build:platform",
+    "build": "tsup",
+    "build:all": "npm run clean && npm run build",
     "dev": "tsc --watch",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -24,7 +19,7 @@
     "demo:availability": "node examples/availability-demo.js",
     "demo:interactive": "node examples/interactive-riddles.js",
     "demo:browser": "cd demo/browser && python -m http.server 8000",
-    "clean": "rimraf dist platform/dist",
+    "clean": "rimraf dist platform/dist dist-cjs platform/dist-cjs",
     "prepublishOnly": "npm run clean && npm run build:all && npm run test",
     "postinstall": "node scripts/check-platform.js"
   },
@@ -43,23 +38,23 @@
   ],
   "author": "PayuBLE Team",
   "license": "MIT",
-  "dependencies": {},
   "optionalDependencies": {
-    "onoff": "^6.0.3",
     "arp-a": "^1.0.0",
-    "ping": "^0.4.4",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "onoff": "^6.0.3",
+    "ping": "^0.4.4"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
     "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
     "jest": "^29.0.0",
+    "rimraf": "^5.0.0",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.0.0",
-    "rimraf": "^5.0.0"
+    "tsup": "^8.5.0",
+    "typescript": "^5.0.0"
   },
   "peerDependencies": {
     "typescript": ">=4.5.0"
@@ -76,14 +71,14 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
     },
     "./platform": {
-      "import": "./platform/dist/index.js",
-      "require": "./platform/dist/index.cjs",
-      "types": "./platform/dist/index.d.ts"
+      "types": "./platform/dist/platform_index.d.ts",
+      "import": "./platform/dist/platform_index.mjs",
+      "require": "./platform/dist/platform_index.cjs"
     }
   },
   "repository": {

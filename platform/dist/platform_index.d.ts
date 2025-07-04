@@ -1,14 +1,15 @@
+export { GPIOButtonHelper, createGPIOButtonTrigger, gpioButton } from './platform_gpio_helper.js';
+export { NetworkMACHelper, createMACNetworkTrigger, discoverLocalDevices, isDeviceOnNetwork, macOnNetwork } from './platform_network_helper.js';
+export { Coordinates, GPSLocationHelper, GPSOptions, LocationZone, calculateDistanceBetween, createGPSLocationTrigger, getCurrentPosition, gpsLocation } from './platform_gps_helper.js';
+
 /**
  * Platform Integrations for PayuBLE
  *
  * This module provides native platform integrations for advanced
  * availability triggers and hardware-specific functionality.
  */
-import { GPIOButtonHelper, createGPIOButtonTrigger, gpioButton } from './platform_gpio_helper';
-import { NetworkMACHelper, createMACNetworkTrigger, macOnNetwork, discoverLocalDevices, isDeviceOnNetwork } from './platform_network_helper';
-import { GPSLocationHelper, createGPSLocationTrigger, gpsLocation, getCurrentPosition, calculateDistanceBetween, type Coordinates, type LocationZone, type GPSOptions } from './platform_gps_helper';
-export { GPIOButtonHelper, createGPIOButtonTrigger, gpioButton, NetworkMACHelper, createMACNetworkTrigger, macOnNetwork, discoverLocalDevices, isDeviceOnNetwork, GPSLocationHelper, createGPSLocationTrigger, gpsLocation, getCurrentPosition, calculateDistanceBetween, type Coordinates, type LocationZone, type GPSOptions };
-export declare function getPlatformInfo(): {
+
+declare function getPlatformInfo(): {
     platform: NodeJS.Platform;
     arch: NodeJS.Architecture;
     node: string;
@@ -20,7 +21,7 @@ export declare function getPlatformInfo(): {
         ipGeolocation: boolean;
     };
 };
-export declare function createPlatformHelpers(): {
+declare function createPlatformHelpers(): {
     gpioButton: (pin: number) => () => boolean;
     macOnNetwork: (mac: string) => () => boolean;
     gpsLocation: (zone: any) => () => boolean;
@@ -37,5 +38,6 @@ export declare function createPlatformHelpers(): {
         };
     };
 };
-export declare function updateCoreHelpers(coreHelpers: any): any;
-//# sourceMappingURL=platform_index.d.ts.map
+declare function updateCoreHelpers(coreHelpers: any): any;
+
+export { createPlatformHelpers, getPlatformInfo, updateCoreHelpers };

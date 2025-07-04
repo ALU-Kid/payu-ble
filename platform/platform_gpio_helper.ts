@@ -3,7 +3,18 @@
  * Requires: npm install onoff
  */
 
-import { Gpio } from 'onoff';
+let Gpio: any = null;
+
+// Dynamic import for optional dependency
+async function loadGpio(): Promise<any> {
+  try {
+    const onoffModule = await import('onoff');
+    return onoffModule.Gpio;
+  } catch (error) {
+    console.warn('onoff module not available, GPIO functionality will be mocked');
+    return null;
+  }
+}
 
 interface GPIOButtonOptions {
   pin: number;
@@ -13,7 +24,7 @@ interface GPIOButtonOptions {
 }
 
 export class GPIOButtonHelper {
-  private gpio: Gpio | null = null;
+  private gpio: any | null = null;
   private isPressed: boolean = false;
   private debounceTimer: NodeJS.Timeout | null = null;
   private options: GPIOButtonOptions;
@@ -29,9 +40,13 @@ export class GPIOButtonHelper {
     this.initializeGPIO();
   }
 
-  private initializeGPIO(): void {
+  private async initializeGPIO(): Promise<void> {
     try {
-      if (!Gpio.accessible) {
+      if (!Gpio) {
+        Gpio = await loadGpio();
+      }
+
+      if (!Gpio || !Gpio.accessible) {
         console.warn('GPIO not accessible. Running in mock mode.');
         return;
       }
@@ -40,7 +55,7 @@ export class GPIOButtonHelper {
         activeLow: this.options.activeLow || false
       });
 
-      this.gpio.watch((err, value) => {
+      this.gpio.watch((err: any, value: number) => {
         if (err) {
           console.error('GPIO watch error:', err);
           return;
@@ -76,7 +91,7 @@ export class GPIOButtonHelper {
   }
 
   public getState(): boolean {
-    if (this.gpio && Gpio.accessible) {
+    if (this.gpio && Gpio && Gpio.accessible) {
       try {
         return this.gpio.readSync() === 1;
       } catch (error) {

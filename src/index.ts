@@ -315,7 +315,7 @@ export const helpers = {
   }
 };
 
-// Export the main class and create a default instance
+// Export the main class
 export { PayuBLE };
 
 // Default instance for convenience
@@ -329,4 +329,5 @@ export const isDeviceAvailable = () => defaultInstance.isDeviceAvailable();
 export const getDeviceId = () => defaultInstance.getDeviceId();
 export const clearChallenge = () => defaultInstance.clearChallenge();
 
+// Export PayuBLE as default for backward compatibility
 export default PayuBLE;

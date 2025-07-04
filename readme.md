@@ -2,7 +2,7 @@
 
 A flexible, smart Bluetooth Low Energy (BLE) challenge system that allows developers to secure BLE connections using customizable challenges like math problems, riddles, hash puzzles, and custom validators.
 
-<script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="rwesa" data-color="#5F7FFF" data-emoji=""  data-font="Lato" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#ffffff" data-coffee-color="#FFDD00" ></script>
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support%20Development-orange?style=for-the-badge&logo=buy-me-a-coffee&logoColor=white)](https://www.buymeacoffee.com/rwesa)
 
 ## Features
 
@@ -17,13 +17,16 @@ A flexible, smart Bluetooth Low Energy (BLE) challenge system that allows develo
 ## Installation
 
 ```bash
-npm install payu-ble
+npm install @rwesa/payu-ble
 ```
 
 ## Quick Start
 
+### ES Modules (ESM) - Recommended
 ```typescript
-import { createChallenge, verifyAnswer, setBLEAvailability, helpers } from 'payu-ble';
+import { createChallenge, verifyAnswer, setBLEAvailability, helpers } from '@rwesa/payu-ble';
+// or
+import PayuBLE, { createChallenge, helpers } from '@rwesa/payu-ble';
 
 // Create a math challenge
 const challenge = createChallenge({
@@ -38,6 +41,15 @@ const isCorrect = verifyAnswer('36'); // true
 
 // Set device availability (only available during business hours)
 setBLEAvailability(helpers.timeBased([9, 10, 11, 12, 13, 14, 15, 16, 17]));
+```
+
+### CommonJS (CJS) - Legacy Support
+```javascript
+const { createChallenge, verifyAnswer, setBLEAvailability, helpers } = require('@rwesa/payu-ble');
+// or
+const PayuBLE = require('@rwesa/payu-ble').default;
+
+// Same usage as above...
 ```
 
 ## Challenge Types
@@ -149,7 +161,7 @@ setBLEAvailability(() => {
 ### Company Device Verification
 
 ```typescript
-import PayuBLE from 'payu-ble';
+import PayuBLE from '@rwesa/payu-ble';
 
 const companyBLE = new PayuBLE('COMPANY_DEVICE_001');
 
@@ -258,7 +270,7 @@ Returns a trigger function that always returns true.
 For multiple device instances:
 
 ```typescript
-import PayuBLE from 'payu-ble';
+import PayuBLE from '@rwesa/payu-ble';
 
 const device1 = new PayuBLE('DEVICE_001');
 const device2 = new PayuBLE('DEVICE_002');
@@ -270,13 +282,41 @@ device2.createChallenge({ type: 'hash' });
 
 ## Platform-Specific Implementations
 
-The package includes placeholder helpers for platform-specific features:
+The package includes both placeholder helpers and real platform-specific implementations:
 
-- `helpers.gpioButton(pin)` - For GPIO-based availability (requires platform implementation)
-- `helpers.macOnNetwork(mac)` - For network-based detection (requires platform implementation)  
-- `helpers.gpsLocation(zone)` - For location-based availability (requires platform implementation)
+### Basic Helpers (Included in main package)
+- `helpers.gpioButton(pin)` - Placeholder for GPIO-based availability
+- `helpers.macOnNetwork(mac)` - Placeholder for network-based detection  
+- `helpers.gpsLocation(zone)` - Placeholder for location-based availability
 
-These helpers provide the structure but require platform-specific implementations for actual GPIO, network scanning, or GPS functionality.
+### Real Platform Implementations
+For actual hardware integration, import the platform-specific modules:
+
+```typescript
+// ES Modules
+import { gpioButton, macOnNetwork, gpsLocationTrigger } from '@rwesa/payu-ble/platform';
+
+// CommonJS
+const { gpioButton, macOnNetwork, gpsLocationTrigger } = require('@rwesa/payu-ble/platform');
+
+// Set up GPIO button availability (Raspberry Pi, etc.)
+setBLEAvailability(gpioButton(18, { activeLow: true }));
+
+// Set up network MAC detection
+setBLEAvailability(macOnNetwork('aa:bb:cc:dd:ee:ff'));
+
+// Set up GPS geofencing
+setBLEAvailability(gpsLocationTrigger({
+  latitude: 40.7128,
+  longitude: -74.0060,
+  radius: 100 // meters
+}));
+```
+
+**Platform Requirements:**
+- **GPIO**: Requires `onoff` package (Linux/Raspberry Pi)
+- **Network**: Uses ARP table scanning (Windows/Mac/Linux)
+- **GPS**: Requires GPS hardware/service integration
 
 ## Contributing
 
